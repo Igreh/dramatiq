@@ -26,7 +26,7 @@ from threading import Event, local
 import pika
 
 from ..broker import Broker, Consumer, MessageProxy
-from ..common import current_millis, dq_name, q_name, xq_name
+from ..common import compute_backoff, current_millis, dq_name, q_name, xq_name
 from ..errors import ConnectionClosed, DecodeError, QueueJoinTimeout
 from ..logging import get_logger
 from ..message import Message, get_encoder
@@ -36,8 +36,14 @@ DEAD_MESSAGE_TTL = int(os.getenv("dramatiq_dead_message_ttl", 86400000 * 7))
 
 #: The max number of times to attempt an enqueue operation in case of
 #: a connection error.
-MAX_ENQUEUE_ATTEMPTS = 6
+MAX_ENQUEUE_ATTEMPTS = int(os.getenv("dramatiq_rabbitmq_max_enqueue_attempts", 6))
 MAX_DECLARE_ATTEMPTS = 2
+
+#: The minimum backoff factor for enqueue retries in milliseconds.
+ENQUEUE_RETRY_MIN_BACKOFF = int(os.getenv("dramatiq_rabbitmq_enqueue_retry_min_backoff", 50))
+
+#: The maximum backoff for enqueue retries in milliseconds.
+ENQUEUE_RETRY_MAX_BACKOFF = int(os.getenv("dramatiq_rabbitmq_enqueue_retry_max_backoff", 5000))
 
 
 class RabbitmqBroker(Broker):
@@ -373,6 +379,14 @@ class RabbitmqBroker(Broker):
                     attempts,
                     MAX_ENQUEUE_ATTEMPTS,
                 )
+
+                _, delay_ms = compute_backoff(
+                    attempts - 1,  # compute_backoff expects 0-based attempts
+                    factor=ENQUEUE_RETRY_MIN_BACKOFF,
+                    max_backoff=ENQUEUE_RETRY_MAX_BACKOFF,
+                )
+
+                time.sleep(delay_ms / 1000)
 
     def get_declared_queues(self):
         """Get all declared queues.

@@ -259,6 +259,15 @@ These are the environment variables that dramatiq reads
    * - ``dramatiq_dead_message_ttl``
      - 604800000 (One week)
      - The maximum amount of time a message can be in the dead letter queue for the RabbitMQ Broker (in milliseconds).
+   * - ``dramatiq_rabbitmq_max_enqueue_attempts``
+     - 6
+     - The maximum number of times to attempt an enqueue operation in case of a connection error for the RabbitMQ Broker.
+   * - ``dramatiq_rabbitmq_enqueue_retry_min_backoff``
+     - 50 (0.05 seconds)
+     - The minimum backoff factor for enqueue retries in milliseconds for the RabbitMQ Broker.
+   * - ``dramatiq_rabbitmq_enqueue_retry_max_backoff``
+     - 5000 (5 seconds)
+     - The maximum backoff for enqueue retries in milliseconds for the RabbitMQ Broker.
    * - ``dramatiq_group_callback_barrier_ttl``
      - 86400000 (One day)
      -
